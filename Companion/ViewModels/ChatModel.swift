@@ -10,11 +10,13 @@ final class ChatModel {
 
     private(set) var isResponding = false
 
-    let transport: any ChatTransport
+    /// Not `let`: storing a key on the device changes which backend the app
+    /// should be talking to, and that has to take effect without a relaunch.
+    private(set) var transport: any ChatTransport
 
     /// Misconfiguration worth showing rather than swallowing. See
     /// `AppEnvironment.configurationWarnings`.
-    let configurationWarnings: [String]
+    private(set) var configurationWarnings: [String]
 
     private var currentTurn: Task<Void, Never>?
 
@@ -26,6 +28,15 @@ final class ChatModel {
     ) {
         self.transport = transport
         self.configurationWarnings = configurationWarnings
+    }
+
+    /// Rebuild the backend from current configuration. Called after the stored
+    /// key changes. Any turn in flight belongs to the old backend, so it is
+    /// cancelled rather than left to finish against a client being replaced.
+    func reloadTransport() {
+        cancel()
+        transport = AppEnvironment.makeTransport()
+        configurationWarnings = AppEnvironment.configurationWarnings
     }
 
     var canSend: Bool {

@@ -69,6 +69,32 @@ silence — a token with no URL, a header name with no token. The app now says s
 at launch, in a banner and on the Xcode console, so a misconfigured run looks
 misconfigured instead of looking fine and talking to the wrong backend.
 
+## Running on your own phone
+
+Scheme environment variables only apply to launches Xcode performs. Tap the app's
+icon on a device afterwards and they are gone, so the app drops to the mock.
+
+For a build that works on a cold launch, tap the **key** button in the top left
+and enter the key there. It goes into the Keychain on that device: never into the
+project, never into the binary, never into this repository, not synced to iCloud,
+and not carried onto another phone by a backup. The transport rebuilds as soon as
+you save, so the subtitle changes without a relaunch.
+
+The environment still wins. A key in the scheme overrides a stored one, so your
+desk setup keeps working without clearing the device first — and the key screen
+says so when that is happening.
+
+Device checklist, in the order that wastes the least time:
+
+- The deployment target is **iOS 26**, so the phone must run iOS 26 or later.
+- Change `PRODUCT_BUNDLE_IDENTIFIER` off `com.example.` to something yours.
+- Set a signing team. A free Apple ID works, but the build expires after 7 days.
+- Enable Developer Mode on the phone: Settings ▸ Privacy & Security.
+
+This is a development convenience, not a shipping design. It puts your key on one
+phone you control. For anything another person installs, stand up the proxy and
+keep the key server-side.
+
 ## Before you ship
 
 A key bundled into an app is extractable from the binary, and whoever extracts

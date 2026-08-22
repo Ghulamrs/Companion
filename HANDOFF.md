@@ -27,12 +27,15 @@ Companion/
    ├─ CompanionApp.swift                 @main struct CompanionApp
    ├─ Models/ChatMessage.swift
    ├─ Services/
+   │  ├─ APIKeyStore.swift               key at rest in the Keychain
    │  ├─ ChatTransport.swift             protocol both backends satisfy
    │  ├─ MockTransport.swift             offline canned replies
    │  ├─ ClaudeClient.swift              live Messages API over URLSession
    │  └─ AppEnvironment.swift            picks backend at launch
    ├─ ViewModels/ChatModel.swift         @Observable, @MainActor
-   ├─ Views/ChatView.swift               transcript, composer, bubbles
+   ├─ Views/
+   │  ├─ ChatView.swift                  transcript, composer, bubbles
+   │  └─ APIKeyView.swift                the only screen that takes a credential
    └─ Assets.xcassets/
 ```
 
@@ -77,7 +80,13 @@ to ~400 ms, test, then put it back.
    through scheme environment variables, read in `AppEnvironment`:
    `ANTHROPIC_API_KEY` (dev only), `CLAUDE_PROXY_URL` (wins if both set),
    `CLAUDE_MODEL`. Never move a key into source, xcconfig-in-repo, or Info.plist.
-3. **Mock stays first-class.** It is how the UI gets iterated without spending
+3. **A stored key is a device convenience, not a shipping answer.** `APIKeyStore`
+   puts a key in the Keychain so the app survives a cold launch on a phone
+   without the key entering the build. It is still one key on one device, and it
+   does not replace the proxy for anything anyone else installs. Precedence is
+   environment first, Keychain second — so a scheme variable overrides the device
+   rather than the other way round, and the key screen says when that applies.
+4. **Mock stays first-class.** It is how the UI gets iterated without spending
    tokens. Do not let it rot as the real client evolves.
 
 ⚠️ **The scheme is deliberately not shared. Keep it that way.** It lives at

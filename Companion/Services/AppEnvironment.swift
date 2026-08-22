@@ -14,6 +14,10 @@ import Foundation
 ///   CLAUDE_PROXY_TOKEN        whatever your proxy issues this install
 ///   CLAUDE_PROXY_AUTH_HEADER  header name for the token (default Authorization)
 ///   CLAUDE_MODEL              claude-sonnet-5           (optional override)
+///
+/// A key stored in the Keychain (see `APIKeyStore`) acts as a fallback beneath
+/// these. The environment always wins, so setting a variable in the scheme
+/// overrides whatever is on the device without having to clear it first.
 enum AppEnvironment {
     private static func value(_ name: String) -> String? {
         let raw = ProcessInfo.processInfo.environment[name]?
@@ -22,7 +26,16 @@ enum AppEnvironment {
         return raw
     }
 
+    /// The key from the scheme's environment. Present only for launches Xcode
+    /// performs — tapping the app's icon on a device gets you none of these.
     static var apiKey: String? { value("ANTHROPIC_API_KEY") }
+
+    /// The key typed into the app on this device, if any.
+    static var storedAPIKey: String? { APIKeyStore.load() }
+
+    /// What the app will actually authenticate with. Environment first, so a
+    /// scheme variable overrides the device without clearing it.
+    static var effectiveAPIKey: String? { apiKey ?? storedAPIKey }
     static var proxyURL: URL? { value("CLAUDE_PROXY_URL").flatMap(URL.init(string:)) }
     static var proxyToken: String? { value("CLAUDE_PROXY_TOKEN") }
     static var model: String { value("CLAUDE_MODEL") ?? "claude-sonnet-5" }
@@ -87,7 +100,7 @@ enum AppEnvironment {
             )
         }
 
-        if proxyURL != nil, apiKey != nil {
+        if proxyURL != nil, effectiveAPIKey != nil {
             warnings.append(
                 "ANTHROPIC_API_KEY is set, but the proxy wins. The key is never read and never forwarded."
             )
@@ -100,9 +113,9 @@ enum AppEnvironment {
         }
 
         // Catches the classic slip of pasting the key over the variable *name*.
-        if let apiKey, !apiKey.hasPrefix("sk-ant-") {
+        if let effectiveAPIKey, !effectiveAPIKey.hasPrefix("sk-ant-") {
             warnings.append(
-                "ANTHROPIC_API_KEY does not look like a key. Set the key as the variable's value, not as its name."
+                "The API key in use does not look like a key (expected it to start with sk-ant-)."
             )
         }
 
@@ -127,9 +140,9 @@ enum AppEnvironment {
             )
         }
 
-        if let apiKey {
+        if let effectiveAPIKey {
             return ClaudeClient(
-                authHeaders: ["x-api-key": apiKey],
+                authHeaders: ["x-api-key": effectiveAPIKey],
                 model: model
             )
         }
