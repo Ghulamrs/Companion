@@ -22,7 +22,7 @@ A SwiftUI chat app targeting **iOS 26**, originally delivered as a zip named
 Companion/
 ├─ Companion.xcodeproj/
 │  ├─ project.pbxproj                    hand-written, objectVersion 77
-│  └─ xcshareddata/xcschemes/Companion.xcscheme
+│  └─ xcuserdata/…/xcschemes/Companion.xcscheme   not shared, not committed
 └─ Companion/
    ├─ CompanionApp.swift                 @main struct CompanionApp
    ├─ Models/ChatMessage.swift
@@ -76,17 +76,21 @@ to ~400 ms, test, then put it back.
 2. **No credential is ever compiled into the binary.** Configuration arrives
    through scheme environment variables, read in `AppEnvironment`:
    `ANTHROPIC_API_KEY` (dev only), `CLAUDE_PROXY_URL` (wins if both set),
-   `CLAUDE_MODEL`. All three are already declared in the shared scheme,
-   unchecked. Never move a key into source, xcconfig-in-repo, or Info.plist.
+   `CLAUDE_MODEL`. Never move a key into source, xcconfig-in-repo, or Info.plist.
 3. **Mock stays first-class.** It is how the UI gets iterated without spending
    tokens. Do not let it rot as the real client evolves.
 
-⚠️ **The scheme is shared, and shared schemes are committed.** It lives at
-`Companion.xcodeproj/xcshareddata/xcschemes/Companion.xcscheme`, and `.gitignore`
-covers `xcuserdata/` but not `xcshareddata/`. Pasting a key into it puts the key
-in the repo — the exact outcome invariant 2 exists to prevent. Untick "Shared"
-(Product ▸ Scheme ▸ Manage Schemes…) before setting a real key, so the scheme
-moves to the ignored `xcuserdata/`.
+⚠️ **The scheme is deliberately not shared. Keep it that way.** It lives at
+`Companion.xcodeproj/xcuserdata/<user>.xcuserdatad/xcschemes/`, which `.gitignore`
+covers. It was shared once, and that was a trap: `.gitignore` covers `xcuserdata/`
+but not `xcshareddata/`, so a key pasted into a shared scheme goes straight into
+the repo — the exact outcome invariant 2 exists to prevent, and this repo is
+public. Re-sharing the scheme re-arms that trap.
+
+The cost is real and worth knowing: a fresh clone gets no scheme, so Xcode
+generates one without the three variables declared. Whoever clones has to add
+the one they need by hand. That is the trade — a small setup step for each
+developer, in exchange for a key that cannot be committed by accident.
 
 ## API facts already established
 

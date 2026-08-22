@@ -41,7 +41,10 @@ compiled into the binary.
 
 **Product ▸ Scheme ▸ Edit Scheme… ▸ Run ▸ Arguments ▸ Environment Variables**
 
-The three variables are already listed there, unchecked. Tick one and relaunch:
+The scheme is deliberately **not shared**, so it is not in the repo and a key
+pasted into it cannot be committed. The cost is that a fresh clone has no scheme
+of its own — Xcode generates one on first open, without these variables. Add the
+one you need by hand, then relaunch:
 
 | Variable            | Effect                                           |
 | ------------------- | ------------------------------------------------ |
