@@ -63,6 +63,12 @@ token unset if your proxy authorizes callers some other way (mutual TLS, an
 identity-aware gateway, a network boundary); the app will simply send no
 credential rather than refuse to start.
 
+Only `CLAUDE_PROXY_URL` and `ANTHROPIC_API_KEY` select a backend; the others are
+modifiers. A modifier set without the thing it modifies used to be ignored in
+silence — a token with no URL, a header name with no token. The app now says so
+at launch, in a banner and on the Xcode console, so a misconfigured run looks
+misconfigured instead of looking fine and talking to the wrong backend.
+
 ## Before you ship
 
 A key bundled into an app is extractable from the binary, and whoever extracts

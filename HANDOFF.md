@@ -135,6 +135,14 @@ token costs a revocation; a leaked Anthropic key costs a bill.
 Point `CLAUDE_PROXY_URL` at it and relaunch — `AppEnvironment` prefers the
 proxy over a raw key automatically, so no app code changes.
 
+`AppEnvironment.configurationWarnings` is the startup guard for all of this: it
+reports orphaned modifiers, an unparseable proxy URL, a key that the proxy makes
+irrelevant, a cleartext proxy URL that ATS will block, and a key that does not
+look like a key. It is a pure property, so it can be checked without launching
+anything. It never quotes a credential's value — naming the variable is enough
+to fix the problem, and a warning that echoes a key just moves the key somewhere
+new.
+
 ## Known rough edges
 
 - `PRODUCT_BUNDLE_IDENTIFIER` is `com.example.Companion`. Change before

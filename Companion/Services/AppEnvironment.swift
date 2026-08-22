@@ -9,7 +9,7 @@ import Foundation
 ///
 ///   Product ▸ Scheme ▸ Edit Scheme… ▸ Run ▸ Arguments ▸ Environment Variables
 ///
-///   ANTHROPIC_API_KEY         sk-ant-...                (development only)
+///   ANTHROPIC_API_KEY                         (development only)
 ///   CLAUDE_PROXY_URL          https://api.yourapp.com   (preferred for real builds)
 ///   CLAUDE_PROXY_TOKEN        whatever your proxy issues this install
 ///   CLAUDE_PROXY_AUTH_HEADER  header name for the token (default Authorization)
@@ -54,6 +54,66 @@ enum AppEnvironment {
         let name = proxyAuthHeaderName
         let usesBearer = name.caseInsensitiveCompare("Authorization") == .orderedSame
         return [name: usesBearer ? "Bearer \(proxyToken)" : proxyToken]
+    }
+
+    /// Configuration that will be silently ignored, or that contradicts itself.
+    ///
+    /// Only `CLAUDE_PROXY_URL` and `ANTHROPIC_API_KEY` actually select a backend.
+    /// The rest are modifiers, and a modifier without the thing it modifies does
+    /// nothing at all — which is the kind of mistake that costs an hour, because
+    /// the app comes up looking fine and simply talks to the wrong backend.
+    ///
+    /// Never include a credential's value in a warning. Naming the variable is
+    /// enough to fix it, and a warning that quotes a key just moves the key
+    /// somewhere new.
+    static var configurationWarnings: [String] {
+        var warnings: [String] = []
+
+        if value("CLAUDE_PROXY_URL") != nil, proxyURL == nil {
+            warnings.append(
+                "CLAUDE_PROXY_URL is set but is not a valid URL, so it was ignored."
+            )
+        }
+
+        if proxyURL == nil, proxyToken != nil {
+            warnings.append(
+                "CLAUDE_PROXY_TOKEN is set but CLAUDE_PROXY_URL is not. The token is going nowhere."
+            )
+        }
+
+        if proxyToken == nil, value("CLAUDE_PROXY_AUTH_HEADER") != nil {
+            warnings.append(
+                "CLAUDE_PROXY_AUTH_HEADER is set but CLAUDE_PROXY_TOKEN is not, so no auth header is sent."
+            )
+        }
+
+        if proxyURL != nil, apiKey != nil {
+            warnings.append(
+                "ANTHROPIC_API_KEY is set, but the proxy wins. The key is never read and never forwarded."
+            )
+        }
+
+        if let proxyURL, proxyURL.scheme?.lowercased() != "https", !isLoopback(proxyURL) {
+            warnings.append(
+                "CLAUDE_PROXY_URL is not https. App Transport Security will block the request."
+            )
+        }
+
+        // Catches the classic slip of pasting the key over the variable *name*.
+        if let apiKey, !apiKey.hasPrefix("sk-ant-") {
+            warnings.append(
+                "ANTHROPIC_API_KEY does not look like a key. Set the key as the variable's value, not as its name."
+            )
+        }
+
+        return warnings
+    }
+
+    private static func isLoopback(_ url: URL) -> Bool {
+        switch url.host()?.lowercased() {
+        case "localhost", "127.0.0.1", "::1": true
+        default: false
+        }
     }
 
     static func makeTransport() -> any ChatTransport {

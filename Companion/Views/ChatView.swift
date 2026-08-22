@@ -2,11 +2,13 @@ import SwiftUI
 
 struct ChatView: View {
     @State private var model = ChatModel()
+    @State private var warningsDismissed = false
     @FocusState private var composerFocused: Bool
 
     var body: some View {
         NavigationStack {
             transcript
+                .safeAreaInset(edge: .top) { warningBanner }
                 .safeAreaInset(edge: .bottom) { composer }
                 .navigationTitle("Claude")
                 .navigationBarTitleDisplayMode(.inline)
@@ -37,6 +39,41 @@ struct ChatView: View {
                 } message: {
                     Text(model.errorText ?? "")
                 }
+        }
+    }
+
+    // MARK: - Configuration warnings
+
+    @ViewBuilder
+    private var warningBanner: some View {
+        if !model.configurationWarnings.isEmpty && !warningsDismissed {
+            HStack(alignment: .top, spacing: 10) {
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .foregroundStyle(.orange)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    ForEach(model.configurationWarnings, id: \.self) { warning in
+                        Text(warning)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Button {
+                    withAnimation { warningsDismissed = true }
+                } label: {
+                    Image(systemName: "xmark")
+                        .font(.caption.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel("Dismiss configuration warnings")
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .background(.bar)
         }
     }
 

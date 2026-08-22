@@ -11,12 +11,21 @@ final class ChatModel {
     private(set) var isResponding = false
 
     let transport: any ChatTransport
+
+    /// Misconfiguration worth showing rather than swallowing. See
+    /// `AppEnvironment.configurationWarnings`.
+    let configurationWarnings: [String]
+
     private var currentTurn: Task<Void, Never>?
 
     var systemPrompt: String? = "You are a helpful assistant inside a small iOS app. Keep replies short."
 
-    init(transport: any ChatTransport = AppEnvironment.makeTransport()) {
+    init(
+        transport: any ChatTransport = AppEnvironment.makeTransport(),
+        configurationWarnings: [String] = AppEnvironment.configurationWarnings
+    ) {
         self.transport = transport
+        self.configurationWarnings = configurationWarnings
     }
 
     var canSend: Bool {
