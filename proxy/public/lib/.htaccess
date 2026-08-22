@@ -1,0 +1,5 @@
+# These files define classes and produce no output, so fetching one achieves
+# nothing. Denying it anyway: a directory of source under the document root is
+# a standing invitation, and the day a server stops running PHP for any reason
+# is the day it serves this as plain text.
+Require all denied

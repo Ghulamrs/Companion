@@ -1,0 +1,18 @@
+# The app builds its URL as <CLAUDE_PROXY_URL>/v1/messages, mirroring the real
+# Messages API. This maps that path onto the single script that serves it.
+#
+# The vhost grants AllowOverride All for /var/www/html, so this file is honoured
+# without touching Apache's configuration or restarting anything.
+
+Options -Indexes
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /ai/
+
+    # Some FPM setups drop the Authorization header on a rewritten request.
+    # Re-publishing it here costs nothing and removes a confusing 401.
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    RewriteRule ^v1/messages/?$ proxy.php [L]
+</IfModule>

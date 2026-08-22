@@ -9,3 +9,11 @@ xcuserdata/
 # Never commit credentials
 Secrets.xcconfig
 *.env
+
+# Proxy: the filled-in config never leaves the server, and the test harness
+# leaves scratch files behind. config.sample.php stays tracked.
+proxy/**/config.php
+proxy/tests/.config.php
+proxy/tests/.received-headers.json
+proxy/tests/.upstream-aborted
+proxy/tests/.dbg.php
