@@ -1,0 +1,11 @@
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+*.moved-aside
+.DS_Store
+
+# Never commit credentials
+Secrets.xcconfig
+*.env
