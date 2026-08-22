@@ -46,13 +46,22 @@ pasted into it cannot be committed. The cost is that a fresh clone has no scheme
 of its own — Xcode generates one on first open, without these variables. Add the
 one you need by hand, then relaunch:
 
-| Variable            | Effect                                           |
-| ------------------- | ------------------------------------------------ |
-| `ANTHROPIC_API_KEY` | Calls api.anthropic.com directly. **Dev only.**   |
-| `CLAUDE_PROXY_URL`  | Routes through your backend. Ship this.           |
-| `CLAUDE_MODEL`      | Overrides the default `claude-sonnet-5`.          |
+| Variable                   | Effect                                                        |
+| -------------------------- | ------------------------------------------------------------- |
+| `ANTHROPIC_API_KEY`        | Calls api.anthropic.com directly. **Dev only.**                |
+| `CLAUDE_PROXY_URL`         | Routes through your backend. Ship this.                        |
+| `CLAUDE_PROXY_TOKEN`       | How the app proves itself to *your* proxy. Not an Anthropic key. |
+| `CLAUDE_PROXY_AUTH_HEADER` | Header the token rides in. Default `Authorization`.            |
+| `CLAUDE_MODEL`             | Overrides the default `claude-sonnet-5`.                       |
 
 `CLAUDE_PROXY_URL` wins if both are set.
+
+With `CLAUDE_PROXY_TOKEN` set and no header override, the app sends
+`Authorization: Bearer <token>`. Set `CLAUDE_PROXY_AUTH_HEADER` to send the raw
+token under another name instead — `CF-Access-Client-Secret`, say. Leave the
+token unset if your proxy authorizes callers some other way (mutual TLS, an
+identity-aware gateway, a network boundary); the app will simply send no
+credential rather than refuse to start.
 
 ## Before you ship
 

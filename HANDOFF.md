@@ -116,12 +116,21 @@ The app cannot ship with a key in it. Build a relay that:
 
 Cloudflare Workers or a Vercel function are both fine. Roughly twenty lines.
 
-⚠️ **The app side of that last bullet does not exist yet.**
-`AppEnvironment.makeTransport()` builds the proxy client with `authHeaders: [:]`
-— literally empty — so there is currently no way for the app to authenticate to
-its own proxy. Whatever the proxy expects, `AppEnvironment` needs a matching
-variable and header plumbed through. Do not treat the proxy as done until this
-is closed.
+**The app side of that last bullet is done.** `AppEnvironment` reads
+`CLAUDE_PROXY_TOKEN` and sends it as `Authorization: Bearer <token>`, or under a
+name of your choosing via `CLAUDE_PROXY_AUTH_HEADER` for gateways that want
+their own (Cloudflare Access and `CF-Access-Client-Secret`, for instance). With
+no token set the app sends no credential, so proxies that authorize by mutual
+TLS or network boundary still work.
+
+Both paths were verified against a local server that logged its request
+headers: the default produced `Authorization: Bearer …`, and the override
+produced the named header carrying the raw token with no `Authorization` sent
+at all.
+
+Note what the token is *not*: it is scoped to your proxy, never the Anthropic
+key, which the proxy holds server-side and the app never sees. A leaked proxy
+token costs a revocation; a leaked Anthropic key costs a bill.
 
 Point `CLAUDE_PROXY_URL` at it and relaunch — `AppEnvironment` prefers the
 proxy over a raw key automatically, so no app code changes.
