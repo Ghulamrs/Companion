@@ -27,7 +27,8 @@ Companion/
    ├─ CompanionApp.swift                 @main struct CompanionApp
    ├─ Models/ChatMessage.swift
    ├─ Services/
-   │  ├─ APIKeyStore.swift               key at rest in the Keychain
+   │  ├─ KeychainStore.swift             one value at rest, this device only
+   │  ├─ DeviceConfiguration.swift       proxy address, proxy token, API key
    │  ├─ ChatTransport.swift             protocol both backends satisfy
    │  ├─ MockTransport.swift             offline canned replies
    │  ├─ ClaudeClient.swift              live Messages API over URLSession
@@ -35,7 +36,7 @@ Companion/
    ├─ ViewModels/ChatModel.swift         @Observable, @MainActor
    ├─ Views/
    │  ├─ ChatView.swift                  transcript, composer, bubbles
-   │  └─ APIKeyView.swift                the only screen that takes a credential
+   │  └─ ConnectionView.swift            the only screen that takes a credential
    └─ Assets.xcassets/
 ```
 
@@ -77,15 +78,22 @@ to ~400 ms, test, then put it back.
 1. **Views never touch networking.** `ChatModel` holds an `any ChatTransport`.
    Adding a backend means adding a conformance, not editing `ChatView`.
 2. **No credential is ever compiled into the binary.** Configuration arrives
-   through scheme environment variables, read in `AppEnvironment`:
-   `ANTHROPIC_API_KEY` (dev only), `CLAUDE_PROXY_URL` (wins if both set),
-   `CLAUDE_MODEL`. Never move a key into source, xcconfig-in-repo, or Info.plist.
-3. **A stored key is a device convenience, not a shipping answer.** `APIKeyStore`
-   puts a key in the Keychain so the app survives a cold launch on a phone
-   without the key entering the build. It is still one key on one device, and it
-   does not replace the proxy for anything anyone else installs. Precedence is
-   environment first, Keychain second — so a scheme variable overrides the device
-   rather than the other way round, and the key screen says when that applies.
+   either through scheme environment variables, read in `AppEnvironment` —
+   `ANTHROPIC_API_KEY` (dev only), `CLAUDE_PROXY_URL` (wins over any key),
+   `CLAUDE_PROXY_TOKEN`, `CLAUDE_PROXY_AUTH_HEADER`, `CLAUDE_MODEL` — or from
+   the Keychain by way of invariant 3. Never move a credential into source, an
+   xcconfig in the repo, or Info.plist.
+3. **The device layer is what makes the app usable at all.** Scheme variables
+   exist only when Xcode launches the app; tap the icon on the home screen and
+   they are gone. `DeviceConfiguration` therefore stores the proxy address, the
+   proxy token and (as a development shortcut) an API key in the Keychain, so a
+   configured phone keeps working untethered. Precedence is environment first,
+   device second — a scheme variable overrides the device rather than the other
+   way round, and `ConnectionView` says so when it applies.
+
+   The proxy fields are the shipping answer. The API key field is not: it puts a
+   key on the phone to be spent directly, which is the arrangement the proxy
+   exists to replace.
 4. **Mock stays first-class.** It is how the UI gets iterated without spending
    tokens. Do not let it rot as the real client evolves.
 
@@ -113,44 +121,47 @@ developer, in exchange for a key that cannot be committed by accident.
 - There is no official Anthropic Swift SDK for the Messages API. Official SDKs
   are Python, TypeScript, C#, Go, Java, PHP, Ruby. Do not go looking for one.
 
-## Next task: the proxy
+## The proxy — built, deployed, in service
 
-The app cannot ship with a key in it. Build a relay that:
+`proxy/` in this repository, deployed to `/var/www/html/ai/` on the Morningwalk
+box, reached at `https://idzeropoint.com/ai`. Its own README carries the detail;
+what belongs here is that it exists, it is live, and the app has been verified
+against it end to end — `POST /ai/v1/messages` returning 200 with the user agent
+`Companion/1 CFNetwork/…`, streamed, on 2026-08-23.
 
-- accepts a standard Messages API request body,
-- attaches `x-api-key` server-side from its own environment,
-- forwards to `https://api.anthropic.com/v1/messages`,
-- streams the SSE response back without buffering it,
-- authorizes its own callers somehow (the app can send a header; decide what).
+Two properties of that server were hard-won and are easy to undo by accident,
+both written up in `proxy/README.md`:
 
-Cloudflare Workers or a Vercel function are both fine. Roughly twenty lines.
+- Apache holds a stream unless `flushpackets=on` is set for the FCGI worker,
+  which turns every turn into one lump delivered at the end.
+- `ignore_user_abort(true)` — the counter-intuitive setting — is what lets a
+  cancelled turn stop the spending rather than silently running to completion.
 
-**The app side of that last bullet is done.** `AppEnvironment` reads
-`CLAUDE_PROXY_TOKEN` and sends it as `Authorization: Bearer <token>`, or under a
-name of your choosing via `CLAUDE_PROXY_AUTH_HEADER` for gateways that want
-their own (Cloudflare Access and `CF-Access-Client-Secret`, for instance). With
-no token set the app sends no credential, so proxies that authorize by mutual
-TLS or network boundary still work.
+The Anthropic key lives only in `/var/www/secure/companion-config.php`, mode 640
+root:apache, a PHP file returning an array. Never read it, never commit it, and
+never `require` a config without capturing output first: a file that is not PHP
+gets echoed straight into the response.
 
-Both paths were verified against a local server that logged its request
-headers: the default produced `Authorization: Bearer …`, and the override
-produced the named header carrying the raw token with no `Authorization` sent
-at all.
+## Three backends, and how to tell which one you have
 
-Note what the token is *not*: it is scoped to your proxy, never the Anthropic
-key, which the proxy holds server-side and the app never sees. A leaked proxy
-token costs a revocation; a leaked Anthropic key costs a bill.
+This cost an evening on 2026-08-22, so it is written down. `makeTransport()`
+picks one of three, and **all three look like a working app**:
 
-Point `CLAUDE_PROXY_URL` at it and relaunch — `AppEnvironment` prefers the
-proxy over a raw key automatically, so no app code changes.
+| Configuration                 | Backend                    | Subtitle                |
+| ----------------------------- | -------------------------- | ----------------------- |
+| proxy address (either source) | relay, key stays on server | `Claude · via proxy`    |
+| API key, no proxy             | straight to api.anthropic  | `Claude · <model>`      |
+| neither                       | `MockTransport`            | `Mock · offline`        |
 
-`AppEnvironment.configurationWarnings` is the startup guard for all of this: it
-reports orphaned modifiers, an unparseable proxy URL, a key that the proxy makes
-irrelevant, a cleartext proxy URL that ATS will block, and a key that does not
-look like a key. It is a pure property, so it can be checked without launching
-anything. It never quotes a credential's value — naming the variable is enough
-to fix the problem, and a warning that echoes a key just moves the key somewhere
-new.
+The mock answers instantly, streams word by word, and never touches the network.
+A convincing reply is therefore **not** evidence of a connection — and a real
+reply is not evidence the proxy was used, because the direct path answers just
+as well while spending a key off the phone.
+
+The nav subtitle is the only thing in the interface that distinguishes them.
+Read it before concluding anything. `CompanionApp.init()` also prints every
+`configurationWarnings` entry to the console at launch, prefixed
+`⚠️ Companion config:`, which is usually the fastest diagnosis available.
 
 ## Known rough edges
 
@@ -167,6 +178,9 @@ new.
   by nothing. `ChatTransport` only requires `stream`. It has never run.
 - The nav bar title is the hardcoded string "Claude", naming the assistant
   rather than the app. It was left alone by the rename on purpose.
+- The composer `TextField` does not take focus from synthetic taps in the
+  Simulator, though the `Form` fields in `ConnectionView` do. Driving a send from
+  tooling therefore does not work; type it by hand.
 
 ## Deliberately not done
 

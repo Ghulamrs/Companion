@@ -1,27 +1,24 @@
 import Foundation
 import Security
 
-/// The API key at rest, in the Keychain.
+/// One value at rest in the Keychain.
 ///
-/// Why here rather than in source, an xcconfig, or an Info.plist: all three of
-/// those end up inside the built binary, and a key inside a binary is
-/// extractable by anyone holding the app. A key in the Keychain is typed once
-/// on the device that uses it. It never enters the build, and never enters the
-/// repository — which matters more than usual here, because this repository is
-/// public.
-///
-/// This is still a development convenience, not a shipping design. For anything
-/// you hand to another person, stand up the proxy and leave the key server-side.
-enum APIKeyStore {
+/// Why here rather than in source, an xcconfig, or an Info.plist: all three end
+/// up inside the built binary, and a secret inside a binary is extractable by
+/// anyone holding the app. A value in the Keychain is typed once on the device
+/// that uses it. It never enters the build, and never enters the repository —
+/// which matters more than usual here, because this repository is public.
+struct KeychainStore {
     /// Scoped to the bundle identifier, so a build with a different identity
-    /// does not silently inherit a key that was stored for another one.
-    private static var service: String {
-        (Bundle.main.bundleIdentifier ?? "Companion") + ".anthropic-api-key"
+    /// does not silently inherit a value stored for another one.
+    private let service: String
+    private let account = "default"
+
+    init(named name: String) {
+        service = (Bundle.main.bundleIdentifier ?? "Companion") + "." + name
     }
 
-    private static let account = "default"
-
-    private static func baseQuery() -> [String: Any] {
+    private func baseQuery() -> [String: Any] {
         [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: service,
@@ -29,7 +26,7 @@ enum APIKeyStore {
         ]
     }
 
-    static func load() -> String? {
+    func load() -> String? {
         var query = baseQuery()
         query[kSecReturnData as String] = true
         query[kSecMatchLimit as String] = kSecMatchLimitOne
@@ -45,8 +42,8 @@ enum APIKeyStore {
     }
 
     @discardableResult
-    static func save(_ key: String) -> Bool {
-        let trimmed = key.trimmingCharacters(in: .whitespacesAndNewlines)
+    func save(_ value: String) -> Bool {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else { return delete() }
 
         // Delete-then-add rather than update: one code path, no stale attributes.
@@ -62,15 +59,16 @@ enum APIKeyStore {
     }
 
     @discardableResult
-    static func delete() -> Bool {
+    func delete() -> Bool {
         let status = SecItemDelete(baseQuery() as CFDictionary)
         return status == errSecSuccess || status == errSecItemNotFound
     }
 
-    /// Enough of the key to recognise which one is stored, and no more. Never
-    /// show or log the whole value — a key on screen is a key in a screenshot.
-    static func redacted(_ key: String) -> String {
-        guard key.count > 12 else { return "••••" }
-        return key.prefix(8) + "…" + key.suffix(4)
+    /// Enough of a secret to recognise which one is stored, and no more. Never
+    /// show or log the whole value — a credential on screen is one in a
+    /// screenshot.
+    static func redacted(_ value: String) -> String {
+        guard value.count > 12 else { return "••••" }
+        return value.prefix(8) + "…" + value.suffix(4)
     }
 }

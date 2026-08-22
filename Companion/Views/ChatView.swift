@@ -29,15 +29,15 @@ struct ChatView: View {
                         .disabled(model.messages.isEmpty)
                     }
                     ToolbarItem(placement: .topBarLeading) {
-                        Button("API key", systemImage: "key") {
+                        Button("Connection", systemImage: "key") {
                             showingKeyEntry = true
                         }
                     }
                 }
                 .sheet(isPresented: $showingKeyEntry) {
-                    APIKeyView {
-                        // Storing a key changes the backend; rebuild it now so the
-                        // next message goes to the right place.
+                    ConnectionView {
+                        // Saving a proxy or a key changes the backend; rebuild it
+                        // now so the next message goes to the right place.
                         model.reloadTransport()
                         warningsDismissed = false
                     }

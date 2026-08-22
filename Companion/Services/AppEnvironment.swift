@@ -15,9 +15,14 @@ import Foundation
 ///   CLAUDE_PROXY_AUTH_HEADER  header name for the token (default Authorization)
 ///   CLAUDE_MODEL              claude-sonnet-5           (optional override)
 ///
-/// A key stored in the Keychain (see `APIKeyStore`) acts as a fallback beneath
-/// these. The environment always wins, so setting a variable in the scheme
-/// overrides whatever is on the device without having to clear it first.
+/// Anything saved on the device (see `DeviceConfiguration`) acts as a fallback
+/// beneath these. The environment always wins, so setting a variable in the
+/// scheme overrides what is on the device without having to clear it first.
+///
+/// The device layer is what makes the app usable off the home screen. Launched
+/// by tapping its icon, a build has none of these variables — and before the
+/// proxy could be stored, that meant silently falling back to the offline mock,
+/// which answers convincingly and sends nothing anywhere.
 enum AppEnvironment {
     private static func value(_ name: String) -> String? {
         let raw = ProcessInfo.processInfo.environment[name]?
@@ -31,13 +36,18 @@ enum AppEnvironment {
     static var apiKey: String? { value("ANTHROPIC_API_KEY") }
 
     /// The key typed into the app on this device, if any.
-    static var storedAPIKey: String? { APIKeyStore.load() }
+    static var storedAPIKey: String? { DeviceConfiguration.apiKey }
 
     /// What the app will actually authenticate with. Environment first, so a
     /// scheme variable overrides the device without clearing it.
     static var effectiveAPIKey: String? { apiKey ?? storedAPIKey }
-    static var proxyURL: URL? { value("CLAUDE_PROXY_URL").flatMap(URL.init(string:)) }
-    static var proxyToken: String? { value("CLAUDE_PROXY_TOKEN") }
+    /// The proxy from the scheme, kept separate so a bad value there can be
+    /// reported against the variable that carries it.
+    static var schemeProxyURL: URL? { value("CLAUDE_PROXY_URL").flatMap(URL.init(string:)) }
+
+    /// What the app will actually call. Environment first, device second.
+    static var proxyURL: URL? { schemeProxyURL ?? DeviceConfiguration.proxyURL }
+    static var proxyToken: String? { value("CLAUDE_PROXY_TOKEN") ?? DeviceConfiguration.proxyToken }
     static var model: String { value("CLAUDE_MODEL") ?? "claude-sonnet-5" }
 
     /// Header the proxy token is sent under. Bearer auth is the common case, so
@@ -82,33 +92,51 @@ enum AppEnvironment {
     static var configurationWarnings: [String] {
         var warnings: [String] = []
 
-        if value("CLAUDE_PROXY_URL") != nil, proxyURL == nil {
+        if value("CLAUDE_PROXY_URL") != nil, schemeProxyURL == nil {
             warnings.append(
-                "CLAUDE_PROXY_URL is set but is not a valid URL, so it was ignored."
+                "CLAUDE_PROXY_URL is set in the scheme but is not a valid URL, so it was ignored."
+            )
+        }
+
+        if DeviceConfiguration.proxyAddress != nil, DeviceConfiguration.proxyURL == nil {
+            warnings.append(
+                "The proxy address saved on this device is not a valid URL, so it was ignored."
             )
         }
 
         if proxyURL == nil, proxyToken != nil {
             warnings.append(
-                "CLAUDE_PROXY_TOKEN is set but CLAUDE_PROXY_URL is not. The token is going nowhere."
+                "A proxy token is set but no proxy address is. The token is going nowhere."
             )
         }
 
         if proxyToken == nil, value("CLAUDE_PROXY_AUTH_HEADER") != nil {
             warnings.append(
-                "CLAUDE_PROXY_AUTH_HEADER is set but CLAUDE_PROXY_TOKEN is not, so no auth header is sent."
+                "CLAUDE_PROXY_AUTH_HEADER is set but no proxy token is, so no auth header is sent."
             )
         }
 
+        // Not every proxy wants a token — some authorise by mutual TLS or by
+        // network boundary — so this reports the likely outcome rather than
+        // calling it an error.
+        if proxyURL != nil, proxyToken == nil {
+            warnings.append(
+                "No proxy token is set. A proxy that authorises its callers will answer 401."
+            )
+        }
+
+        // Names neither variable: the key in play may have come from the scheme
+        // or from this device, and naming the wrong one sends you hunting in
+        // the wrong place.
         if proxyURL != nil, effectiveAPIKey != nil {
             warnings.append(
-                "ANTHROPIC_API_KEY is set, but the proxy wins. The key is never read and never forwarded."
+                "An API key is set, but the proxy wins. The key is never read and never forwarded."
             )
         }
 
         if let proxyURL, proxyURL.scheme?.lowercased() != "https", !isLoopback(proxyURL) {
             warnings.append(
-                "CLAUDE_PROXY_URL is not https. App Transport Security will block the request."
+                "The proxy address is not https. App Transport Security will block the request."
             )
         }
 
