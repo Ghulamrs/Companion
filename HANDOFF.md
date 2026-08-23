@@ -70,7 +70,17 @@ Then boot it and confirm the mock path works end to end:
 | `error`          | Alert fires, empty placeholder bubble removed   |
 | send, then ■     | Turn cancels mid-stream, no orphaned bubble     |
 
-Nav subtitle should read `Mock · offline`.
+**Read the nav subtitle before running that table.** It has to say
+`Mock · offline`, and on a simulator that has been used for proxy testing it
+will not: the proxy address lives in the Keychain rather than the app bundle,
+so rebuilding and reinstalling leaves it in place and the app comes up as
+`Claude · via proxy` instead. The table then measures the
+real backend — and `error` stops being a test, because it goes to Claude as a
+message and is billed like any other.
+
+Clearing it is the key icon in the nav bar, then the Remove buttons under
+*Saved on this device*. `xcrun simctl erase` does it wholesale, along with
+everything else that simulator remembers.
 
 Note on testing cancel: the longest canned reply streams in about 3 seconds,
 which is too fast to catch by hand or by tooling. Raise `MockTransport.chunkDelay`
