@@ -176,8 +176,6 @@ Read it before concluding anything. `CompanionApp.init()` also prints every
   and fix fallout when convenient, not before the build is green.
 - The target uses a file-system synchronized group, so new `.swift` files are
   picked up automatically. Do not add them to a build phase manually.
-- `ClaudeClient.send()` — the non-streaming path — is fully written and called
-  by nothing. `ChatTransport` only requires `stream`. It has never run.
 - The nav bar title is the hardcoded string "Claude", naming the assistant
   rather than the app. It was left alone by the rename on purpose.
 - The composer `TextField` does not take focus from synthetic taps in the

@@ -133,7 +133,7 @@ swapping backends is one branch in `AppEnvironment.makeTransport()`.
 
 - Every request needs an `anthropic-version` header; this project sends `2023-06-01`.
 - The Messages API is stateless, so the full conversation history goes out on
-  every turn. That is why `send()` passes the whole `messages` array.
+  every turn. That is why `ChatModel.send()` passes the whole `messages` array.
 - Streaming responses are server-sent events; `ClaudeClient` reads
   `URLSession.bytes(for:)` line by line and keeps the `text` from each
   `content_block_delta`.

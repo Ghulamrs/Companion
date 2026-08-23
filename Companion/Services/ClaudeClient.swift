@@ -12,16 +12,7 @@ private struct MessagesRequest: Encodable {
     let max_tokens: Int
     let system: String?
     let messages: [WireMessage]
-    let stream: Bool?
-}
-
-private struct MessagesResponse: Decodable {
-    struct Block: Decodable {
-        let type: String
-        let text: String?
-    }
-    let content: [Block]
-    let stop_reason: String?
+    let stream: Bool
 }
 
 private struct StreamEvent: Decodable {
@@ -104,39 +95,20 @@ struct ClaudeClient: ChatTransport {
         return request
     }
 
-    private func body(
-        history: [ChatMessage],
-        system: String?,
-        streaming: Bool
-    ) -> MessagesRequest {
+    private func body(history: [ChatMessage], system: String?) -> MessagesRequest {
         MessagesRequest(
             model: model,
             max_tokens: maxTokens,
             system: system,
             // The Messages API is stateless: send the whole history every turn.
             messages: history.map { WireMessage(role: $0.role.rawValue, content: $0.text) },
-            stream: streaming ? true : nil
+            stream: true
         )
     }
 
     private func errorMessage(from data: Data) -> String {
         (try? JSONDecoder().decode(APIErrorEnvelope.self, from: data))?.error.message
             ?? String(decoding: data, as: UTF8.self)
-    }
-
-    // MARK: Non-streaming
-
-    func send(history: [ChatMessage], system: String? = nil) async throws -> String {
-        let request = try makeRequest(body(history: history, system: system, streaming: false))
-        let (data, response) = try await URLSession.shared.data(for: request)
-
-        guard let http = response as? HTTPURLResponse else { throw ClaudeError.badResponse }
-        guard (200..<300).contains(http.statusCode) else {
-            throw ClaudeError.http(status: http.statusCode, message: errorMessage(from: data))
-        }
-
-        let decoded = try JSONDecoder().decode(MessagesResponse.self, from: data)
-        return decoded.content.compactMap(\.text).joined()
     }
 
     // MARK: Streaming
@@ -148,9 +120,7 @@ struct ClaudeClient: ChatTransport {
         AsyncThrowingStream { continuation in
             let task = Task {
                 do {
-                    let request = try makeRequest(
-                        body(history: history, system: system, streaming: true)
-                    )
+                    let request = try makeRequest(body(history: history, system: system))
                     let (bytes, response) = try await URLSession.shared.bytes(for: request)
 
                     guard let http = response as? HTTPURLResponse else {
