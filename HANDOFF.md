@@ -23,6 +23,7 @@ Companion/
 ├─ Companion.xcodeproj/
 │  ├─ project.pbxproj                    hand-written, objectVersion 77
 │  └─ xcuserdata/…/xcschemes/Companion.xcscheme   not shared, not committed
+├─ Tools/makeicon.swift                  draws the icon; edit this, not the PNG
 └─ Companion/
    ├─ CompanionApp.swift                 @main struct CompanionApp
    ├─ Models/ChatMessage.swift
@@ -37,7 +38,7 @@ Companion/
    ├─ Views/
    │  ├─ ChatView.swift                  transcript, composer, bubbles
    │  └─ ConnectionView.swift            the only screen that takes a credential
-   └─ Assets.xcassets/
+   └─ Assets.xcassets/                   accent colour, and the app icon
 ```
 
 **Status: verified.** The project was authored in a Linux container with no
@@ -175,8 +176,6 @@ Read it before concluding anything. `CompanionApp.init()` also prints every
   and fix fallout when convenient, not before the build is green.
 - The target uses a file-system synchronized group, so new `.swift` files are
   picked up automatically. Do not add them to a build phase manually.
-- `Assets.xcassets/AppIcon.appiconset` is empty, so the app shows a blank icon
-  on the home screen.
 - `ClaudeClient.send()` — the non-streaming path — is fully written and called
   by nothing. `ChatTransport` only requires `stream`. It has never run.
 - The nav bar title is the hardcoded string "Claude", naming the assistant
