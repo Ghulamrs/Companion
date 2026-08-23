@@ -45,7 +45,9 @@ Companion/
 Swift toolchain and no Xcode, and for a while had never been compiled. It has
 now been built and run.
 
-- Builds clean on Xcode 26.6, iPhone 17 simulator, zero warnings.
+- Builds clean on Xcode 26.6, iPhone 17 simulator, zero warnings, in the
+  Swift 6 language mode (`SWIFT_VERSION = 6.0`), which is complete data-race
+  checking rather than warnings.
 - All three mock behaviours below were exercised in the Simulator and pass.
 
 ## Verify after any structural change
@@ -171,9 +173,6 @@ Read it before concluding anything. `CompanionApp.init()` also prints every
   names are scoped to the bundle identifier: change it again and a device stops
   finding what it stored under the old one. An install under
   `com.example.Companion` may still be sitting on older Simulators.
-- `SWIFT_VERSION = 5.0` for an easy first build. The code is annotated for
-  Swift 6 (`@MainActor` on `ChatModel`, `Sendable` on transports) — bump it
-  and fix fallout when convenient, not before the build is green.
 - The target uses a file-system synchronized group, so new `.swift` files are
   picked up automatically. Do not add them to a build phase manually.
 - The nav bar title is the hardcoded string "Claude", naming the assistant

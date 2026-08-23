@@ -1,6 +1,7 @@
 # Companion
 
-A SwiftUI chat app for the Claude Messages API, targeting iOS 26.
+A SwiftUI chat app for the Claude Messages API, targeting iOS 26 and
+building in the Swift 6 language mode.
 
 It ships with an **offline mock backend**, so it builds and runs in the
 Simulator with no API key and no network. Wire in the real API when the UI
@@ -140,7 +141,5 @@ swapping backends is one branch in `AppEnvironment.makeTransport()`.
 
 ## Adjust before first run
 
-- `PRODUCT_BUNDLE_IDENTIFIER` is `com.example.Companion`. Change it in target
-  build settings if you plan to run on a device.
-- `SWIFT_VERSION` is 5.0 for an easy first build. Bump to 6.0 when you want
-  strict concurrency checking.
+- `PRODUCT_BUNDLE_IDENTIFIER` is `PQR.Companion`. Change it in target build
+  settings to one of your own if you plan to run on a device.
