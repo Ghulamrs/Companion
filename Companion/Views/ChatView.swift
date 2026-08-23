@@ -1,6 +1,14 @@
 import SwiftUI
 
 struct ChatView: View {
+    /// The title names the app; the subtitle beneath it names the backend.
+    /// Read from the bundle rather than written out, because a literal here is
+    /// exactly what the rename to Companion missed once already.
+    private static let appName =
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleDisplayName") as? String
+            ?? Bundle.main.object(forInfoDictionaryKey: "CFBundleName") as? String
+            ?? "Companion"
+
     @State private var model = ChatModel()
     @State private var warningsDismissed = false
     @State private var showingKeyEntry = false
@@ -11,12 +19,12 @@ struct ChatView: View {
             transcript
                 .safeAreaInset(edge: .top) { warningBanner }
                 .safeAreaInset(edge: .bottom) { composer }
-                .navigationTitle("Claude")
+                .navigationTitle(Self.appName)
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .principal) {
                         VStack(spacing: 1) {
-                            Text("Claude").font(.headline)
+                            Text(Self.appName).font(.headline)
                             Text(model.transport.displayName)
                                 .font(.caption2)
                                 .foregroundStyle(.secondary)

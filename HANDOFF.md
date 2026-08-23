@@ -171,7 +171,11 @@ A convincing reply is therefore **not** evidence of a connection — and a real
 reply is not evidence the proxy was used, because the direct path answers just
 as well while spending a key off the phone.
 
-The nav subtitle is the only thing in the interface that distinguishes them.
+The nav subtitle is the only thing in the interface that distinguishes them,
+and it is left to do that alone. The title above it was the literal `Claude`
+for a while, which the rename to Companion missed; over a mock conversation it
+was simply untrue, and over a real one it said `Claude` twice. It now names the
+app, taken from `CFBundleName` so a later rename cannot leave it behind again.
 Read it before concluding anything. `CompanionApp.init()` also prints every
 `configurationWarnings` entry to the console at launch, prefixed
 `⚠️ Companion config:`, which is usually the fastest diagnosis available.
@@ -185,8 +189,6 @@ Read it before concluding anything. `CompanionApp.init()` also prints every
   `com.example.Companion` may still be sitting on older Simulators.
 - The target uses a file-system synchronized group, so new `.swift` files are
   picked up automatically. Do not add them to a build phase manually.
-- The nav bar title is the hardcoded string "Claude", naming the assistant
-  rather than the app. It was left alone by the rename on purpose.
 - The composer `TextField` does not take focus from synthetic taps in the
   Simulator, though the `Form` fields in `ConnectionView` do. Driving a send from
   tooling therefore does not work; type it by hand.
