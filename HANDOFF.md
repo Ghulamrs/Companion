@@ -183,10 +183,20 @@ Read it before concluding anything. `CompanionApp.init()` also prints every
 ## Known rough edges
 
 - `PRODUCT_BUNDLE_IDENTIFIER` is `PQR.Companion` and `DEVELOPMENT_TEAM` is set,
-  so the app signs and runs on a physical device. Note that the Keychain service
-  names are scoped to the bundle identifier: change it again and a device stops
-  finding what it stored under the old one. An install under
-  `com.example.Companion` may still be sitting on older Simulators.
+  so the app signs and runs on a physical device. Change the identifier again
+  and a device stops finding what it stored, which is worth understanding rather
+  than working around: the scoping is doubled, and only half of it is ours.
+  `KeychainStore.init` prefixes each service name with the bundle identifier,
+  and iOS independently files the items under the access group derived from the
+  signed application identifier. Dropping our half would change nothing — the
+  platform's half is not escapable without a keychain-access-group entitlement —
+  while orphaning every value already stored under the prefixed name. So leave
+  it, and expect a re-identified build to come up asking for its configuration
+  again.
+- A `com.example.Companion` install from before that rename is still on the
+  iPhone 17 simulator, confirmed 2026-08-23. It is a separate app to the system:
+  its own icon, its own Keychain items, and no relation to what the current
+  build stores. Delete it there if it is ever confusing.
 - The target uses a file-system synchronized group, so new `.swift` files are
   picked up automatically. Do not add them to a build phase manually.
 - The composer `TextField` does not take focus from synthetic taps in the
