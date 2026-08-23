@@ -165,8 +165,11 @@ Read it before concluding anything. `CompanionApp.init()` also prints every
 
 ## Known rough edges
 
-- `PRODUCT_BUNDLE_IDENTIFIER` is `com.example.Companion`. Change before
-  running on a physical device.
+- `PRODUCT_BUNDLE_IDENTIFIER` is `PQR.Companion` and `DEVELOPMENT_TEAM` is set,
+  so the app signs and runs on a physical device. Note that the Keychain service
+  names are scoped to the bundle identifier: change it again and a device stops
+  finding what it stored under the old one. An install under
+  `com.example.Companion` may still be sitting on older Simulators.
 - `SWIFT_VERSION = 5.0` for an easy first build. The code is annotated for
   Swift 6 (`@MainActor` on `ChatModel`, `Sendable` on transports) — bump it
   and fix fallout when convenient, not before the build is green.
