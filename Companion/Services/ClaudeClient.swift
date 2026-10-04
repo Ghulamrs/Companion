@@ -22,6 +22,8 @@ private struct StreamEvent: Decodable {
     }
     let type: String
     let delta: Delta?
+    /// Present on an `error` event.
+    let error: APIErrorEnvelope.Payload?
 }
 
 private struct APIErrorEnvelope: Decodable {
@@ -36,12 +38,16 @@ private struct APIErrorEnvelope: Decodable {
 
 enum ClaudeError: LocalizedError {
     case http(status: Int, message: String)
+    /// An `error` event inside a stream that had already answered 200.
+    case stream(type: String, message: String)
     case badResponse
 
     var errorDescription: String? {
         switch self {
         case let .http(status, message):
             "Claude API error \(status): \(message)"
+        case let .stream(type, message):
+            "Claude stopped mid-reply (\(type)): \(message)"
         case .badResponse:
             "Unexpected response from the Claude API."
         }
@@ -113,6 +119,34 @@ struct ClaudeClient: ChatTransport {
 
     // MARK: Streaming
 
+    /// Reduces one line of the event stream to the text it adds, if any.
+    ///
+    /// Throws for an `error` event. The API sends one mid-stream, after the 200
+    /// and possibly after some text, when it cannot finish a reply — an
+    /// `overloaded_error` is the usual case. Dropping it, as this once did,
+    /// ended the turn as if it had finished: a reply cut short with no word of
+    /// why, or an empty bubble.
+    static func text(fromStreamLine line: String) throws -> String? {
+        guard line.hasPrefix("data:") else { return nil }
+        var payload = line.dropFirst(5)
+        if payload.first == " " { payload = payload.dropFirst() }
+
+        guard let event = try? JSONDecoder().decode(StreamEvent.self, from: Data(payload.utf8))
+        else { return nil }
+
+        switch event.type {
+        case "content_block_delta":
+            return event.delta?.text
+        case "error":
+            throw ClaudeError.stream(
+                type: event.error?.type ?? "error",
+                message: event.error?.message ?? "The stream reported an error without a message."
+            )
+        default:
+            return nil
+        }
+    }
+
     func stream(
         history: [ChatMessage],
         system: String?
@@ -127,7 +161,8 @@ struct ClaudeClient: ChatTransport {
                         throw ClaudeError.badResponse
                     }
                     guard (200..<300).contains(http.statusCode) else {
-                        // The body is an SSE stream even on failure; drain it for the message.
+                        // A non-2xx answer is a JSON error envelope, not an event stream;
+                        // drain it for the message.
                         var raw = Data()
                         for try await byte in bytes { raw.append(byte) }
                         throw ClaudeError.http(
@@ -136,15 +171,9 @@ struct ClaudeClient: ChatTransport {
                         )
                     }
 
-                    let decoder = JSONDecoder()
                     for try await line in bytes.lines {
                         if Task.isCancelled { break }
-                        guard line.hasPrefix("data: ") else { continue }
-                        let payload = Data(line.dropFirst(6).utf8)
-                        guard let event = try? decoder.decode(StreamEvent.self, from: payload)
-                        else { continue }
-
-                        if event.type == "content_block_delta", let text = event.delta?.text {
+                        if let text = try Self.text(fromStreamLine: line) {
                             continuation.yield(text)
                         }
                     }
