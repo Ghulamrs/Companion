@@ -16,7 +16,7 @@ record of decisions made so far.
 
 ## What exists
 
-A SwiftUI chat app targeting **iOS 26**, originally delivered as a zip named
+A SwiftUI chat app targeting **iOS 27**, originally delivered as a zip named
 `ClaudeChat` and since renamed throughout to `Companion`.
 
 ```

@@ -1,6 +1,6 @@
 # Companion
 
-A SwiftUI chat app for the Claude Messages API, targeting iOS 26 and
+A SwiftUI chat app for the Claude Messages API, targeting iOS 27 and
 building in the Swift 6 language mode.
 
 It ships with an **offline mock backend**, so it builds and runs in the
@@ -87,7 +87,7 @@ says so when that is happening.
 
 Device checklist, in the order that wastes the least time:
 
-- The deployment target is **iOS 26**, so the phone must run iOS 26 or later.
+- The deployment target is **iOS 27**, so the phone must run iOS 27 or later.
 - Change `PRODUCT_BUNDLE_IDENTIFIER` off `com.example.` to something yours.
 - Set a signing team. A free Apple ID works, but the build expires after 7 days.
 - Enable Developer Mode on the phone: Settings ▸ Privacy & Security.
