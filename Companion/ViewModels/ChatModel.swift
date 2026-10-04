@@ -18,7 +18,8 @@ final class ChatModel {
     /// `AppEnvironment.configurationWarnings`.
     private(set) var configurationWarnings: [String]
 
-    private var currentTurn: Task<Void, Never>?
+    /// Readable so tests can await a turn they have just cancelled.
+    private(set) var currentTurn: Task<Void, Never>?
 
     var systemPrompt: String? = "You are a helpful assistant inside a small iOS app. Keep replies short."
 
@@ -63,6 +64,9 @@ final class ChatModel {
                     messages[messages.count - 1].text += delta
                 }
             } catch {
+                // A cancelled turn has already been cleaned up by `cancel()`,
+                // and the placeholder at the end may now belong to a newer turn.
+                guard !Task.isCancelled else { return }
                 // Drop the empty placeholder so the list is not left with a stub.
                 if messages.last?.text.isEmpty == true {
                     messages.removeLast()
@@ -70,6 +74,12 @@ final class ChatModel {
                 errorText = error.localizedDescription
             }
 
+            // Same reason: once cancelled, `isResponding` and `currentTurn` are
+            // no longer this turn's to clear. `cancel()` then `send()` runs
+            // without a suspension point, so by the time this task resumes they
+            // may describe the next turn, and clearing them would unlock the
+            // composer mid-reply and leave ■ with nothing to cancel.
+            guard !Task.isCancelled else { return }
             isResponding = false
             currentTurn = nil
         }
