@@ -5,7 +5,8 @@ record of decisions made so far.
 
 ## Working agreement
 
-- The project lives at `/Users/g.r.akhtar/Documents/Claude/Companion`.
+- The project lives at `/Users/g.r.akhtar/Developer/Claude/Companion`, moved
+  there from `~/Documents/Claude/Companion`.
 - Anything outside that path: ask first, at the moment it comes up.
   Do not batch permission requests or assume prior approval carries forward.
 
@@ -54,14 +55,16 @@ now been built and run.
 ## Verify after any structural change
 
 ```bash
-cd "/Users/g.r.akhtar/Documents/Claude/Companion"
+cd "/Users/g.r.akhtar/Developer/Claude/Companion"
 xcodebuild -project Companion.xcodeproj -scheme Companion \
            -destination 'platform=iOS Simulator,name=iPhone 17' build
 ```
 
 Adjust the device name to whatever `xcrun simctl list devices available` shows.
-Build outside the checkout (`-derivedDataPath` elsewhere) — codesign objects to
-the provenance xattr on files under `~/Documents`.
+Build outside the checkout (`-derivedDataPath` elsewhere) — codesign objected to
+the provenance xattr on files while the project lived under `~/Documents`. That
+may not hold under `~/Developer`, but nobody has checked, and building elsewhere
+costs nothing.
 
 Then the tests — same command with `test` in place of `build`:
 
