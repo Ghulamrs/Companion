@@ -39,6 +39,7 @@ Companion/
    │  ├─ ChatView.swift                  transcript, composer, bubbles
    │  └─ ConnectionView.swift            the only screen that takes a credential
    └─ Assets.xcassets/                   accent colour, and the app icon
+CompanionTests/                          Swift Testing, hosted in the app
 ```
 
 **Status: verified.** The project was authored in a Linux container with no
@@ -61,6 +62,19 @@ xcodebuild -project Companion.xcodeproj -scheme Companion \
 Adjust the device name to whatever `xcrun simctl list devices available` shows.
 Build outside the checkout (`-derivedDataPath` elsewhere) — codesign objects to
 the provenance xattr on files under `~/Documents`.
+
+Then the tests — same command with `test` in place of `build`:
+
+```bash
+xcodebuild -project Companion.xcodeproj -scheme Companion \
+           -destination 'platform=iOS Simulator,name=iPhone 17' test
+```
+
+`CompanionTests` is a file-system synchronized group like the app target, so a
+new test file is picked up without touching the project. Because the scheme is
+not shared (see below), a fresh clone's generated scheme may not list the test
+target: *Edit Scheme ▸ Test ▸ +* and add `CompanionTests` once. The tests inject
+their own transports, so they never touch the network or spend a token.
 
 Then boot it and confirm the mock path works end to end:
 
